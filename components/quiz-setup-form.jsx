@@ -6,7 +6,6 @@ import { useQuiz } from "@/lib/quiz-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -15,11 +14,10 @@ export function QuizSetupForm() {
   const { 
     username, 
     setUsername, 
-    difficulty, 
-    setDifficulty, 
     saveToLeaderboard, 
     setSaveToLeaderboard,
-    startQuiz 
+    startQuiz,
+    dbConnected
   } = useQuiz();
   
   const [errors, setErrors] = useState({});
@@ -50,6 +48,15 @@ export function QuizSetupForm() {
         <CardDescription>
           Enter your details to start the Capital Cities Quiz
         </CardDescription>
+        {dbConnected ? (
+          <div className="mt-2 text-sm text-green-500">
+            ✅ Connected to database
+          </div>
+        ) : (
+          <div className="mt-2 text-sm text-red-500">
+            ❌ Not connected to database (scores won't be saved)
+          </div>
+        )}
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -57,7 +64,7 @@ export function QuizSetupForm() {
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              placeholder="Enter your username"
+              placeholder="Enter a cool username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
@@ -67,17 +74,16 @@ export function QuizSetupForm() {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="difficulty">Difficulty</Label>
-            <Select value={difficulty} onValueChange={setDifficulty}>
-              <SelectTrigger id="difficulty">
-                <SelectValue placeholder="Select difficulty" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="easy">Easy</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="hard">Hard</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="text-sm text-muted-foreground mb-2">
+              How to play:
+            </div>
+            <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
+              <li>The quiz starts with easy questions (20 seconds per question)</li>
+              <li>After 10 correct answers, you'll move to medium difficulty (15 seconds per question)</li>
+              <li>After 20 correct answers, you'll move to hard difficulty (8 seconds per question)</li>
+              <li>The quiz ends when you answer incorrectly or run out of time</li>
+              <li>Answer quickly for bonus points!</li>
+            </ul>
           </div>
           
           <div className="flex items-center space-x-2 pt-2">

@@ -12,8 +12,9 @@ export function QuizResults() {
     answers, 
     resetQuiz, 
     username, 
-    difficulty,
-    saveToLeaderboard
+    currentDifficulty,
+    saveToLeaderboard,
+    questionsAnswered
   } = useQuiz();
   
   // Calculate statistics
@@ -25,6 +26,12 @@ export function QuizResults() {
   const totalResponseTime = answers.reduce((total, answer) => total + answer.timeRemaining, 0);
   const averageResponseTime = totalQuestions > 0 ? (totalResponseTime / totalQuestions).toFixed(1) : 0;
   
+  // Get the last answer (the one that ended the game)
+  const lastAnswer = answers.length > 0 ? answers[answers.length - 1] : null;
+  const gameEndReason = lastAnswer && !lastAnswer.isCorrect 
+    ? "Wrong Answer" 
+    : "Time Expired";
+  
   const handlePlayAgain = () => {
     resetQuiz();
     router.push("/");
@@ -32,6 +39,17 @@ export function QuizResults() {
   
   const handleViewLeaderboard = () => {
     router.push("/leaderboard");
+  };
+  
+  // Get difficulty level description
+  const getDifficultyAchievement = () => {
+    if (questionsAnswered >= 20) {
+      return "You reached the Hard level!";
+    } else if (questionsAnswered >= 10) {
+      return "You reached the Medium level!";
+    } else {
+      return "You were playing on Easy level";
+    }
   };
   
   return (
@@ -47,8 +65,8 @@ export function QuizResults() {
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
           <div className="p-4 bg-muted rounded-lg">
-            <h4 className="text-2xl font-bold mb-1">{correctAnswers}/{totalQuestions}</h4>
-            <p className="text-sm text-muted-foreground">Correct Answers</p>
+            <h4 className="text-2xl font-bold mb-1">{questionsAnswered}</h4>
+            <p className="text-sm text-muted-foreground">Questions Answered</p>
           </div>
           <div className="p-4 bg-muted rounded-lg">
             <h4 className="text-2xl font-bold mb-1">{accuracy}%</h4>
@@ -65,8 +83,12 @@ export function QuizResults() {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>Username:</div>
             <div className="font-medium">{username}</div>
-            <div>Difficulty:</div>
-            <div className="font-medium capitalize">{difficulty}</div>
+            <div>Final Difficulty:</div>
+            <div className="font-medium capitalize">{currentDifficulty}</div>
+            <div>Achievement:</div>
+            <div className="font-medium">{getDifficultyAchievement()}</div>
+            <div>Game Ended By:</div>
+            <div className="font-medium">{gameEndReason}</div>
             <div>Saved to Leaderboard:</div>
             <div className="font-medium">{saveToLeaderboard ? "Yes" : "No"}</div>
           </div>

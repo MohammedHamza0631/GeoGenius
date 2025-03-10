@@ -1,33 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-// Mock leaderboard data (in a real app, this would come from a database)
-const mockLeaderboardData = [
-  { id: 1, username: "GeoMaster", score: 285, difficulty: "hard", date: "2023-06-15" },
-  { id: 2, username: "CapitalExpert", score: 270, difficulty: "hard", date: "2023-06-18" },
-  { id: 3, username: "WorldTraveler", score: 245, difficulty: "hard", date: "2023-06-20" },
-  { id: 4, username: "GeographyNerd", score: 230, difficulty: "hard", date: "2023-06-22" },
-  { id: 5, username: "MapQuizzer", score: 225, difficulty: "medium", date: "2023-06-14" },
-  { id: 6, username: "AtlasReader", score: 210, difficulty: "medium", date: "2023-06-19" },
-  { id: 7, username: "GlobeTrotter", score: 195, difficulty: "medium", date: "2023-06-21" },
-  { id: 8, username: "EarthExplorer", score: 180, difficulty: "medium", date: "2023-06-23" },
-  { id: 9, username: "ContinentHopper", score: 165, difficulty: "easy", date: "2023-06-16" },
-  { id: 10, username: "CountryCounter", score: 150, difficulty: "easy", date: "2023-06-17" },
-];
+import { getLeaderboard } from "@/app/actions";
 
 export default function LeaderboardPage() {
   const [difficultyFilter, setDifficultyFilter] = useState("all");
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  // Filter leaderboard data based on selected difficulty
-  const filteredData = difficultyFilter === "all"
-    ? mockLeaderboardData
-    : mockLeaderboardData.filter(entry => entry.difficulty === difficultyFilter);
+  // Fetch leaderboard data
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const result = await getLeaderboard(difficultyFilter);
+        if (result.success) {
+          setLeaderboardData(result.entries);
+        } else {
+          setError(result.error || "Failed to fetch leaderboard data");
+          setLeaderboardData([]);
+        }
+      } catch (error) {
+        console.error("Error fetching leaderboard:", error);
+        setError("An unexpected error occurred");
+        setLeaderboardData([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [difficultyFilter]);
+  
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
   
   return (
     <div className="flex flex-col min-h-screen">
@@ -69,46 +84,58 @@ export default function LeaderboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
-              <div className="grid grid-cols-12 gap-2 p-4 font-medium border-b bg-muted">
-                <div className="col-span-1">#</div>
-                <div className="col-span-4">Username</div>
-                <div className="col-span-2 text-right">Score</div>
-                <div className="col-span-3">Difficulty</div>
-                <div className="col-span-2">Date</div>
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                <p>Loading leaderboard data...</p>
               </div>
-              
-              {filteredData.map((entry, index) => (
-                <div 
-                  key={entry.id} 
-                  className="grid grid-cols-12 gap-2 p-4 border-b last:border-0 items-center"
-                >
-                  <div className="col-span-1 font-medium">{index + 1}</div>
-                  <div className="col-span-4 font-medium">{entry.username}</div>
-                  <div className="col-span-2 text-right font-bold">{entry.score}</div>
-                  <div className="col-span-3">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      entry.difficulty === "easy" 
-                        ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
-                        : entry.difficulty === "medium"
-                        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                        : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                    }`}>
-                      {entry.difficulty.charAt(0).toUpperCase() + entry.difficulty.slice(1)}
-                    </span>
-                  </div>
-                  <div className="col-span-2 text-muted-foreground text-sm">
-                    {entry.date}
-                  </div>
+            ) : error ? (
+              <div className="p-8 text-center text-red-500">
+                <p>{error}</p>
+                <p className="text-sm mt-2">Make sure your database is properly configured</p>
+              </div>
+            ) : (
+              <div className="rounded-md border">
+                <div className="grid grid-cols-12 gap-2 p-4 font-medium border-b bg-muted">
+                  <div className="col-span-1">#</div>
+                  <div className="col-span-4">Username</div>
+                  <div className="col-span-2 text-right">Score</div>
+                  <div className="col-span-3">Difficulty</div>
+                  <div className="col-span-2">Date</div>
                 </div>
-              ))}
-              
-              {filteredData.length === 0 && (
-                <div className="p-4 text-center text-muted-foreground">
-                  No scores found for this difficulty level.
-                </div>
-              )}
-            </div>
+                
+                {leaderboardData.length > 0 ? (
+                  leaderboardData.map((entry, index) => (
+                    <div 
+                      key={entry.id} 
+                      className="grid grid-cols-12 gap-2 p-4 border-b last:border-0 items-center"
+                    >
+                      <div className="col-span-1 font-medium">{index + 1}</div>
+                      <div className="col-span-4 font-medium">{entry.username}</div>
+                      <div className="col-span-2 text-right font-bold">{entry.score}</div>
+                      <div className="col-span-3">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                          entry.difficulty === "easy" 
+                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
+                            : entry.difficulty === "medium"
+                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                        }`}>
+                          {entry.difficulty.charAt(0).toUpperCase() + entry.difficulty.slice(1)}
+                        </span>
+                      </div>
+                      <div className="col-span-2 text-muted-foreground text-sm">
+                        {formatDate(entry.date)}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground">
+                    No scores found for this difficulty level.
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuiz } from "@/lib/quiz-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,27 +14,29 @@ export function QuizQuestion() {
     timeLeft, 
     setTimeLeft, 
     answerQuestion,
-    difficulty,
-    quizSettings
+    currentDifficulty,
+    quizSettings,
+    questionsAnswered
   } = useQuiz();
   
   const [selectedOption, setSelectedOption] = useState(null);
   const [isAnswered, setIsAnswered] = useState(false);
   const [progressColor, setProgressColor] = useState("bg-primary");
+  const [progressValue, setProgressValue] = useState(100);
+  
+  const timerRef = useRef(null);
+  const startTimeRef = useRef(null);
+  const animationFrameRef = useRef(null);
   
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
   
   // Use quizSettings from context if available, otherwise use the default from quiz-data
   const settings = quizSettings || defaultQuizSettings;
-  const maxTime = settings[difficulty]?.timePerQuestion || 20;
-  const progressPercentage = (timeLeft / maxTime) * 100;
+  const maxTime = settings[currentDifficulty]?.timePerQuestion || 20;
   
-  // Timer effect
+  // Update progress color based on time left
   useEffect(() => {
-    if (timeLeft <= 0 || isAnswered) return;
-    
-    // Update progress color based on time left
     if (timeLeft < maxTime * 0.25) {
       setProgressColor("bg-red-500");
     } else if (timeLeft < maxTime * 0.5) {
@@ -42,21 +44,73 @@ export function QuizQuestion() {
     } else {
       setProgressColor("bg-primary");
     }
+  }, [timeLeft, maxTime]);
+  
+  // Smooth timer animation
+  useEffect(() => {
+    if (isAnswered) return;
     
-    const timer = setTimeout(() => {
-      setTimeLeft(timeLeft - 1);
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    // Set start time for this second
+    startTimeRef.current = Date.now();
+    
+    // Function to update progress smoothly
+    const updateProgress = () => {
+      const now = Date.now();
+      const elapsed = now - startTimeRef.current;
+      const secondProgress = 1 - (elapsed / 1000);
+      const newProgressValue = ((timeLeft - 1 + secondProgress) / maxTime) * 100;
       
-      // Auto-submit when time runs out
-      if (timeLeft === 1) {
-        handleAnswer(null);
+      setProgressValue(Math.max(0, newProgressValue));
+      
+      if (elapsed < 1000 && timeLeft > 0) {
+        animationFrameRef.current = requestAnimationFrame(updateProgress);
       }
-    }, 1000);
+    };
     
-    return () => clearTimeout(timer);
+    // Start smooth animation
+    animationFrameRef.current = requestAnimationFrame(updateProgress);
+    
+    // Set timeout for the next second
+    if (timeLeft > 0) {
+      timerRef.current = setTimeout(() => {
+        setTimeLeft(timeLeft - 1);
+        
+        // Auto-submit when time runs out
+        if (timeLeft === 1) {
+          handleAnswer(null);
+        }
+      }, 1000);
+    }
+    
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
   }, [timeLeft, isAnswered, maxTime, setTimeLeft]);
   
   const handleAnswer = (option) => {
     if (isAnswered) return;
+    
+    // Clear timers
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
     
     setSelectedOption(option);
     setIsAnswered(true);
@@ -76,14 +130,14 @@ export function QuizQuestion() {
       <CardHeader>
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium">
-            Question {currentQuestionIndex + 1} of {totalQuestions}
+            Questions Answered: {questionsAnswered}
           </span>
           <span className="text-sm font-medium">
             Time: {timeLeft}s
           </span>
         </div>
         <Progress 
-          value={progressPercentage} 
+          value={progressValue} 
           className="h-2"
           indicatorClassName={progressColor}
         />
@@ -116,7 +170,7 @@ export function QuizQuestion() {
       </CardContent>
       <CardFooter className="flex justify-between">
         <div className="text-sm text-muted-foreground">
-          Difficulty: {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+          Difficulty: {currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1)}
         </div>
       </CardFooter>
     </Card>
