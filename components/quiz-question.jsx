@@ -23,10 +23,12 @@ export function QuizQuestion() {
   const [isAnswered, setIsAnswered] = useState(false);
   const [progressColor, setProgressColor] = useState("bg-primary");
   const [progressValue, setProgressValue] = useState(100);
+  const [correctAnswer, setCorrectAnswer] = useState(null);
   
   const timerRef = useRef(null);
   const startTimeRef = useRef(null);
   const animationFrameRef = useRef(null);
+  const questionChangeRef = useRef(currentQuestionIndex);
   
   const currentQuestion = questions[currentQuestionIndex];
   const totalQuestions = questions.length;
@@ -34,6 +36,14 @@ export function QuizQuestion() {
   // Use quizSettings from context if available, otherwise use the default from quiz-data
   const settings = quizSettings || defaultQuizSettings;
   const maxTime = settings[currentDifficulty]?.timePerQuestion || 20;
+  
+  // Reset progress bar when question changes
+  useEffect(() => {
+    if (questionChangeRef.current !== currentQuestionIndex) {
+      setProgressValue(100);
+      questionChangeRef.current = currentQuestionIndex;
+    }
+  }, [currentQuestionIndex]);
   
   // Update progress color based on time left
   useEffect(() => {
@@ -99,7 +109,7 @@ export function QuizQuestion() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [timeLeft, isAnswered, maxTime, setTimeLeft]);
+  }, [timeLeft, isAnswered, maxTime, setTimeLeft, currentQuestion, answerQuestion]);
   
   const handleAnswer = (option) => {
     if (isAnswered) return;
@@ -114,13 +124,15 @@ export function QuizQuestion() {
     
     setSelectedOption(option);
     setIsAnswered(true);
+    setCorrectAnswer(currentQuestion.capital);
     
     // Short delay to show the selected answer before moving to next question
     setTimeout(() => {
       answerQuestion(option, timeLeft);
       setIsAnswered(false);
       setSelectedOption(null);
-    }, 1000);
+      setCorrectAnswer(null);
+    }, 1500); // Increased to 1.5 seconds to give users more time to see the correct answer
   };
   
   if (!currentQuestion) return null;
@@ -151,16 +163,22 @@ export function QuizQuestion() {
             key={index}
             variant={
               isAnswered
-                ? option === currentQuestion.capital
+                ? option === correctAnswer
                   ? "success"
-                  : option === selectedOption
+                  : option === selectedOption && option !== correctAnswer
                   ? "destructive"
                   : "outline"
                 : selectedOption === option
                 ? "default"
                 : "outline"
             }
-            className="h-16 text-lg font-medium"
+            className={`h-16 text-lg font-medium ${
+              isAnswered && option === correctAnswer 
+                ? "bg-green-500 hover:bg-green-600 text-white" 
+                : isAnswered && option === selectedOption && option !== correctAnswer
+                ? "bg-red-500 hover:bg-red-600 text-white"
+                : ""
+            }`}
             onClick={() => handleAnswer(option)}
             disabled={isAnswered}
           >
@@ -175,4 +193,4 @@ export function QuizQuestion() {
       </CardFooter>
     </Card>
   );
-} 
+}

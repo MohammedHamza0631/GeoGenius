@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, testConnection } from "@/lib/db";
+import { prisma, testConnection } from "@/lib/prisma";
 
 // Test database connection
 export async function checkDbConnection() {

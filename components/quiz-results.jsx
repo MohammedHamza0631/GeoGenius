@@ -41,14 +41,29 @@ export function QuizResults() {
     router.push("/leaderboard");
   };
   
-  // Get difficulty level description
-  const getDifficultyAchievement = () => {
-    if (questionsAnswered >= 20) {
-      return "You reached the Hard level!";
+  // Get achievement level based on questions answered
+  const getAchievementLevel = () => {
+    if (questionsAnswered >= 30) {
+      return "Expert Geographer";
+    } else if (questionsAnswered >= 20) {
+      return "Advanced Traveler";
     } else if (questionsAnswered >= 10) {
-      return "You reached the Medium level!";
+      return "Intermediate Explorer";
     } else {
-      return "You were playing on Easy level";
+      return "Novice Adventurer";
+    }
+  };
+  
+  // Get phase description based on questions answered
+  const getPhaseDescription = () => {
+    if (questionsAnswered >= 30) {
+      return "You reached the Expert Phase with hard questions!";
+    } else if (questionsAnswered >= 20) {
+      return "You reached the Advanced Phase with medium and hard questions!";
+    } else if (questionsAnswered >= 10) {
+      return "You reached the Intermediate Phase with easy and medium questions!";
+    } else {
+      return "You were in the Initial Phase with easy questions.";
     }
   };
   
@@ -61,6 +76,7 @@ export function QuizResults() {
         <div className="text-center">
           <h3 className="text-4xl font-bold mb-2">{score}</h3>
           <p className="text-muted-foreground">Total Score</p>
+          <p className="text-lg font-medium mt-2">{getAchievementLevel()}</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
@@ -86,11 +102,29 @@ export function QuizResults() {
             <div>Final Difficulty:</div>
             <div className="font-medium capitalize">{currentDifficulty}</div>
             <div>Achievement:</div>
-            <div className="font-medium">{getDifficultyAchievement()}</div>
+            <div className="font-medium">{getPhaseDescription()}</div>
             <div>Game Ended By:</div>
             <div className="font-medium">{gameEndReason}</div>
             <div>Saved to Leaderboard:</div>
             <div className="font-medium">{saveToLeaderboard ? "Yes" : "No"}</div>
+          </div>
+        </div>
+        
+        <div className="bg-muted p-4 rounded-lg">
+          <h4 className="font-medium mb-2">Scoring Breakdown</h4>
+          <div className="text-sm">
+            <p>Base points per correct answer:</p>
+            <ul className="list-disc pl-5 mb-2">
+              <li>Easy: 10 points</li>
+              <li>Medium: 15 points</li>
+              <li>Hard: 20 points</li>
+            </ul>
+            <p>Time bonus multipliers:</p>
+            <ul className="list-disc pl-5">
+              <li>Easy: 0.5 points per second remaining</li>
+              <li>Medium: 0.75 points per second remaining</li>
+              <li>Hard: 1 point per second remaining</li>
+            </ul>
           </div>
         </div>
       </CardContent>
@@ -108,4 +142,4 @@ export function QuizResults() {
       </CardFooter>
     </Card>
   );
-} 
+}

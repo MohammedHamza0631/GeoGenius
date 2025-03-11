@@ -14,13 +14,29 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata = {
-  title: "Capital Cities Quiz",
+  title: "GeoGenius",
   description: "Test your knowledge of world capital cities in this interactive quiz!",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        
+        <link
+  rel="icon"
+  href="/icon?<generated>"
+  type="image/<generated>"
+  sizes="<generated>"
+        />
+        <link
+  rel="apple-touch-icon"
+  href="/apple-icon?<generated>"
+  type="image/<generated>"
+  sizes="<generated>"
+/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
       <body
         className={`${inter.variable} ${robotoMono.variable} font-sans antialiased`}
       >

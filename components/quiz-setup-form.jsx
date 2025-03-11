@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useQuiz } from "@/lib/quiz-context";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,33 @@ export function QuizSetupForm() {
   } = useQuiz();
   
   const [errors, setErrors] = useState({});
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameExists, setUsernameExists] = useState(false);
+  
+  // Check username availability with debounce
+  useEffect(() => {
+    if (!username || !dbConnected) return;
+    
+    const checkUsername = async () => {
+      setIsCheckingUsername(true);
+      try {
+        const response = await fetch(`/api/check-username?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
+        
+        // Only update if the database is connected
+        if (data.dbConnected) {
+          setUsernameExists(data.exists);
+        }
+      } catch (error) {
+        console.error('Error checking username:', error);
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    };
+    
+    const timeoutId = setTimeout(checkUsername, 500);
+    return () => clearTimeout(timeoutId);
+  }, [username, dbConnected]);
   
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -29,6 +56,8 @@ export function QuizSetupForm() {
     const newErrors = {};
     if (!username.trim()) {
       newErrors.username = "Username is required";
+    } else if (usernameExists && saveToLeaderboard && dbConnected) {
+      newErrors.username = "Username already exists. Please choose a different username.";
     }
     
     if (Object.keys(newErrors).length > 0) {
@@ -41,6 +70,9 @@ export function QuizSetupForm() {
     router.push("/quiz");
   };
   
+  // Determine if the form should be disabled
+  const isFormDisabled = isCheckingUsername || (usernameExists && saveToLeaderboard && dbConnected);
+
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
@@ -54,7 +86,7 @@ export function QuizSetupForm() {
           </div>
         ) : (
           <div className="mt-2 text-sm text-red-500">
-            ❌ Not connected to database (scores won't be saved)
+            ❌ Not connected to database (scores won&apos;t be saved)
           </div>
         )}
       </CardHeader>
@@ -64,10 +96,18 @@ export function QuizSetupForm() {
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              placeholder="Enter a cool username"
+              placeholder="Enter your username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
+            {isCheckingUsername && (
+              <p className="text-sm text-muted-foreground">Checking username availability...</p>
+            )}
+            {usernameExists && !isCheckingUsername && (
+              <p className="text-sm text-red-500">
+                Username already exists. Please choose a different username.
+              </p>
+            )}
             {errors.username && (
               <p className="text-sm text-red-500">{errors.username}</p>
             )}
@@ -79,8 +119,9 @@ export function QuizSetupForm() {
             </div>
             <ul className="text-sm text-muted-foreground list-disc pl-5 space-y-1">
               <li>The quiz starts with easy questions (20 seconds per question)</li>
-              <li>After 10 correct answers, you'll move to medium difficulty (15 seconds per question)</li>
-              <li>After 20 correct answers, you'll move to hard difficulty (8 seconds per question)</li>
+              <li>After 10 questions, you&apos;ll progress to a mix of easy and medium questions (15 seconds per question)</li>
+              <li>After 20 questions, you&apos;ll face a mix of medium and hard questions (8 seconds per question)</li>
+              <li>After 30 questions, you&apos;ll tackle only hard questions (8 seconds per question)</li>
               <li>The quiz ends when you answer incorrectly or run out of time</li>
               <li>Answer quickly for bonus points!</li>
             </ul>
@@ -91,6 +132,7 @@ export function QuizSetupForm() {
               id="leaderboard" 
               checked={saveToLeaderboard}
               onCheckedChange={setSaveToLeaderboard}
+              disabled={!dbConnected}
             />
             <Label htmlFor="leaderboard" className="text-sm font-normal">
               Save my score to the leaderboard
@@ -99,7 +141,11 @@ export function QuizSetupForm() {
         </CardContent>
         
         <CardFooter>
-          <Button type="submit" className="w-full">
+          <Button 
+            type="submit" 
+            className="w-full"
+            disabled={isFormDisabled}
+          >
             Start Quiz
           </Button>
         </CardFooter>
