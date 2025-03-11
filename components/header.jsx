@@ -8,7 +8,7 @@ export function Header() {
     <header className="border-b">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <span className="text-xl font-bold tracking-tight">Capital Cities Quiz</span>
+          <span className="text-xl font-bold tracking-tight">GeoGenius</span>
         </Link>
         <nav className="flex items-center gap-4 sm:gap-6">
           <Link 
