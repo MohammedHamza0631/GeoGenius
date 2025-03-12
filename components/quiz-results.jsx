@@ -1,143 +1,187 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { useQuiz } from "@/lib/quiz-context";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { PinEntry } from "@/components/pin-entry";
+import { storeVerifiedUser } from "@/lib/pin-utils";
 
 export function QuizResults() {
-  const router = useRouter();
   const { 
+    username, 
     score, 
     answers, 
-    resetQuiz, 
-    username, 
-    currentDifficulty,
+    currentDifficulty, 
+    resetQuiz,
     saveToLeaderboard,
-    questionsAnswered
+    dbConnected
   } = useQuiz();
   
-  // Calculate statistics
-  const totalQuestions = answers.length;
-  const correctAnswers = answers.filter(answer => answer.isCorrect).length;
-  const accuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
+  const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [pinError, setPinError] = useState(null);
+  const [isSettingPin, setIsSettingPin] = useState(false);
+  const [pinSetSuccess, setPinSetSuccess] = useState(false);
   
-  // Calculate average response time
-  const totalResponseTime = answers.reduce((total, answer) => total + answer.timeRemaining, 0);
-  const averageResponseTime = totalQuestions > 0 ? (totalResponseTime / totalQuestions).toFixed(1) : 0;
-  
-  // Get the last answer (the one that ended the game)
-  const lastAnswer = answers.length > 0 ? answers[answers.length - 1] : null;
-  const gameEndReason = lastAnswer && !lastAnswer.isCorrect 
-    ? "Wrong Answer" 
-    : "Time Expired";
-  
+  // Handle play again
   const handlePlayAgain = () => {
     resetQuiz();
-    router.push("/");
+    window.location.href = "/start";
   };
   
-  const handleViewLeaderboard = () => {
-    router.push("/leaderboard");
-  };
+  // Check if we need to prompt for PIN creation
+  useEffect(() => {
+    const checkPinNeeded = async () => {
+      if (!username || !saveToLeaderboard || !dbConnected) return;
+      
+      try {
+        // Check if username has a PIN
+        const response = await fetch(`/api/check-pin?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
+        
+        if (data.success && !data.hasPin) {
+          // Username exists but doesn't have a PIN, prompt to create one
+          setShowPinPrompt(true);
+        }
+      } catch (error) {
+        console.error('Error checking PIN status:', error);
+      }
+    };
+    
+    checkPinNeeded();
+  }, [username, saveToLeaderboard, dbConnected]);
   
-  // Get achievement level based on questions answered
-  const getAchievementLevel = () => {
-    if (questionsAnswered >= 30) {
-      return "Expert Geographer";
-    } else if (questionsAnswered >= 20) {
-      return "Advanced Traveler";
-    } else if (questionsAnswered >= 10) {
-      return "Intermediate Explorer";
-    } else {
-      return "Novice Adventurer";
+  // Handle PIN submission
+  const handlePinSubmit = async (pin) => {
+    setPinError(null);
+    setIsSettingPin(true);
+    
+    try {
+      // Set the PIN
+      const response = await fetch('/api/set-pin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, pin }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Store in localStorage
+        storeVerifiedUser(username, pin);
+        setPinSetSuccess(true);
+        setShowPinPrompt(false);
+      } else {
+        setPinError(data.error || "Failed to set PIN. Please try again.");
+      }
+    } catch (error) {
+      console.error('Error setting PIN:', error);
+      setPinError("An error occurred. Please try again.");
+    } finally {
+      setIsSettingPin(false);
     }
   };
   
-  // Get phase description based on questions answered
-  const getPhaseDescription = () => {
-    if (questionsAnswered >= 30) {
-      return "You reached the Expert Phase with hard questions!";
-    } else if (questionsAnswered >= 20) {
-      return "You reached the Advanced Phase with medium and hard questions!";
-    } else if (questionsAnswered >= 10) {
-      return "You reached the Intermediate Phase with easy and medium questions!";
-    } else {
-      return "You were in the Initial Phase with easy questions.";
-    }
-  };
+  // Calculate statistics
+  const correctAnswers = answers.filter(a => a.isCorrect).length;
+  const accuracy = answers.length > 0 ? Math.round((correctAnswers / answers.length) * 100) : 0;
+  
+  // Calculate average response time
+  const totalResponseTime = answers.reduce((total, answer) => total + answer.responseTime, 0);
+  const averageResponseTime = answers.length > 0 ? (totalResponseTime / answers.length / 1000).toFixed(2) : 0;
+  
+  // If showing PIN entry, render that instead of the results
+  if (showPinPrompt) {
+    return (
+      <div className="space-y-6">
+        <Card className="w-full max-w-md mx-auto">
+          <CardHeader>
+            <CardTitle className="text-2xl">Great Job!</CardTitle>
+            <CardDescription>
+              You scored {score} points on {currentDifficulty} difficulty.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-center mb-4">
+              To protect your scores and prevent others from playing as you, please create a PIN.
+            </p>
+          </CardContent>
+        </Card>
+        
+        <PinEntry
+          username={username}
+          isNewPin={true}
+          onPinSubmit={handlePinSubmit}
+          onCancel={() => setShowPinPrompt(false)}
+          error={pinError}
+        />
+      </div>
+    );
+  }
   
   return (
-    <Card className="w-full max-w-2xl mx-auto">
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="text-2xl text-center">Quiz Results</CardTitle>
+        <CardTitle className="text-2xl">Quiz Results</CardTitle>
+        <CardDescription>
+          Here's how you did, {username}!
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="text-center">
-          <h3 className="text-4xl font-bold mb-2">{score}</h3>
+          <div className="text-5xl font-bold mb-2">{score}</div>
           <p className="text-muted-foreground">Total Score</p>
-          <p className="text-lg font-medium mt-2">{getAchievementLevel()}</p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+        <div className="grid grid-cols-2 gap-4 text-center">
           <div className="p-4 bg-muted rounded-lg">
-            <h4 className="text-2xl font-bold mb-1">{questionsAnswered}</h4>
-            <p className="text-sm text-muted-foreground">Questions Answered</p>
+            <div className="text-2xl font-bold mb-1">{correctAnswers}</div>
+            <p className="text-sm text-muted-foreground">Correct Answers</p>
           </div>
           <div className="p-4 bg-muted rounded-lg">
-            <h4 className="text-2xl font-bold mb-1">{accuracy}%</h4>
+            <div className="text-2xl font-bold mb-1">{accuracy}%</div>
             <p className="text-sm text-muted-foreground">Accuracy</p>
           </div>
           <div className="p-4 bg-muted rounded-lg">
-            <h4 className="text-2xl font-bold mb-1">{averageResponseTime}s</h4>
+            <div className="text-2xl font-bold mb-1">{answers.length}</div>
+            <p className="text-sm text-muted-foreground">Questions Answered</p>
+          </div>
+          <div className="p-4 bg-muted rounded-lg">
+            <div className="text-2xl font-bold mb-1">{averageResponseTime}s</div>
             <p className="text-sm text-muted-foreground">Avg. Response Time</p>
           </div>
         </div>
         
-        <div className="bg-muted p-4 rounded-lg">
-          <h4 className="font-medium mb-2">Quiz Details</h4>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>Username:</div>
-            <div className="font-medium">{username}</div>
-            <div>Final Difficulty:</div>
-            <div className="font-medium capitalize">{currentDifficulty}</div>
-            <div>Achievement:</div>
-            <div className="font-medium">{getPhaseDescription()}</div>
-            <div>Game Ended By:</div>
-            <div className="font-medium">{gameEndReason}</div>
-            <div>Saved to Leaderboard:</div>
-            <div className="font-medium">{saveToLeaderboard ? "Yes" : "No"}</div>
-          </div>
+        <div className="flex justify-center">
+          <Badge className="text-sm" variant={
+            currentDifficulty === "easy" ? "success" : 
+            currentDifficulty === "medium" ? "warning" : "destructive"
+          }>
+            {currentDifficulty.charAt(0).toUpperCase() + currentDifficulty.slice(1)} Difficulty
+          </Badge>
         </div>
         
-        <div className="bg-muted p-4 rounded-lg">
-          <h4 className="font-medium mb-2">Scoring Breakdown</h4>
-          <div className="text-sm">
-            <p>Base points per correct answer:</p>
-            <ul className="list-disc pl-5 mb-2">
-              <li>Easy: 10 points</li>
-              <li>Medium: 15 points</li>
-              <li>Hard: 20 points</li>
-            </ul>
-            <p>Time bonus multipliers:</p>
-            <ul className="list-disc pl-5">
-              <li>Easy: 0.5 points per second remaining</li>
-              <li>Medium: 0.75 points per second remaining</li>
-              <li>Hard: 1 point per second remaining</li>
-            </ul>
+        {pinSetSuccess && (
+          <div className="p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 rounded-md text-sm text-center">
+            PIN successfully set! Your username is now protected.
           </div>
-        </div>
+        )}
+        
+        {saveToLeaderboard && dbConnected && (
+          <p className="text-center text-sm text-muted-foreground">
+            Your score has been saved to the leaderboard.
+          </p>
+        )}
       </CardContent>
-      <CardFooter className="flex flex-col sm:flex-row gap-4">
-        <Button onClick={handlePlayAgain} className="w-full sm:w-auto">
-          Play Again
-        </Button>
-        <Button 
-          onClick={handleViewLeaderboard} 
-          variant="outline" 
-          className="w-full sm:w-auto"
-        >
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" onClick={() => window.location.href = "/leaderboard"}>
           View Leaderboard
+        </Button>
+        <Button onClick={handlePlayAgain}>
+          Play Again
         </Button>
       </CardFooter>
     </Card>

@@ -17,6 +17,7 @@ model LeaderboardEntry {
   score      Int
   difficulty String
   date       DateTime @default(now())
+  pinHash    String?  // Optional to support existing entries
   
   @@map("leaderboard_entries")
 }
