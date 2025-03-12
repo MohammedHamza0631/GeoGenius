@@ -17,7 +17,11 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PinEntry } from "@/components/pin-entry";
-import { isUserVerified, storeVerifiedUser, getStoredPin } from "@/lib/pin-utils";
+import { 
+  isVerifiedInSession, 
+  storeVerifiedSession, 
+  getPreviousUsernames 
+} from "@/lib/pin-utils";
 
 export function QuizSetupForm() {
   const router = useRouter();
@@ -35,6 +39,8 @@ export function QuizSetupForm() {
   const [usernameExists, setUsernameExists] = useState(false);
   const [previousUsernames, setPreviousUsernames] = useState([]);
   const [previousScores, setPreviousScores] = useState([]);
+  const [bestScore, setBestScore] = useState(null);
+  const [recentScores, setRecentScores] = useState([]);
   const [isLoadingScores, setIsLoadingScores] = useState(false);
   
   // PIN verification states
@@ -47,9 +53,9 @@ export function QuizSetupForm() {
   // Load previous usernames from localStorage on mount
   useEffect(() => {
     try {
-      const storedUsernames = localStorage.getItem('previousUsernames');
-      if (storedUsernames) {
-        setPreviousUsernames(JSON.parse(storedUsernames));
+      const storedUsernames = getPreviousUsernames();
+      if (storedUsernames.length > 0) {
+        setPreviousUsernames(storedUsernames);
       }
     } catch (error) {
       console.error('Error loading previous usernames:', error);
@@ -104,12 +110,19 @@ export function QuizSetupForm() {
       const data = await response.json();
       
       if (data.success) {
-        setPreviousScores(data.scores);
+        // The API now returns both bestScore and scores (recent attempts)
+        setBestScore(data.bestScore);
+        setRecentScores(data.scores);
+        setPreviousScores(data.scores); // Keep this for backward compatibility
       } else {
+        setBestScore(null);
+        setRecentScores([]);
         setPreviousScores([]);
       }
     } catch (error) {
       console.error('Error fetching previous scores:', error);
+      setBestScore(null);
+      setRecentScores([]);
       setPreviousScores([]);
     } finally {
       setIsLoadingScores(false);
@@ -134,8 +147,8 @@ export function QuizSetupForm() {
           setUsernameHasPin(pinData.hasPin);
           setUsernameExists(true);
           
-          // If the username has a PIN, show the PIN entry immediately
-          if (pinData.hasPin) {
+          // If the username has a PIN and is not verified in this session, show the PIN entry
+          if (pinData.hasPin && !isVerifiedInSession(selectedUsername)) {
             setIsNewPin(false);
             setShowPinEntry(true);
           }
@@ -167,8 +180,8 @@ export function QuizSetupForm() {
         const data = await response.json();
         
         if (data.success) {
-          // Store in localStorage
-          storeVerifiedUser(username, pin);
+          // Mark username as verified in this session
+          storeVerifiedSession(username);
           setShowPinEntry(false);
           
           // Start the quiz
@@ -190,8 +203,8 @@ export function QuizSetupForm() {
         const data = await response.json();
         
         if (data.success && data.isValid) {
-          // Store in localStorage
-          storeVerifiedUser(username, pin);
+          // Mark username as verified in this session
+          storeVerifiedSession(username);
           setShowPinEntry(false);
           
           // Start the quiz
@@ -224,23 +237,18 @@ export function QuizSetupForm() {
       return;
     }
     
-    // Save username to localStorage
-    try {
-      // Only store unique usernames
-      if (!previousUsernames.includes(username)) {
-        const updatedUsernames = [...previousUsernames, username].slice(-5); // Keep last 5 usernames
-        localStorage.setItem('previousUsernames', JSON.stringify(updatedUsernames));
-        setPreviousUsernames(updatedUsernames);
-      }
-    } catch (error) {
-      console.error('Error saving username to localStorage:', error);
-    }
-    
     // Check if PIN verification is needed
     if (usernameExists && usernameHasPin) {
-      // Always show PIN entry for usernames with PINs
-      setIsNewPin(false);
-      setShowPinEntry(true);
+      // Check if already verified in this session
+      if (isVerifiedInSession(username)) {
+        // Already verified, start the quiz
+        startQuiz();
+        router.push("/quiz");
+      } else {
+        // Show PIN entry
+        setIsNewPin(false);
+        setShowPinEntry(true);
+      }
     } else if (usernameExists) {
       // Username exists but doesn't have a PIN yet
       // Start the quiz directly
@@ -332,7 +340,9 @@ export function QuizSetupForm() {
             )}
             {usernameExists && !isCheckingUsername && usernameHasPin && (
               <p className="text-sm text-amber-500">
-                This username is protected with a PIN. You'll need to enter it to continue.
+                {isVerifiedInSession(username) 
+                  ? "This username is already verified in this session."
+                  : "This username is protected with a PIN. You'll need to enter it to continue."}
               </p>
             )}
             {usernameExists && !isCheckingUsername && !usernameHasPin && (
@@ -346,27 +356,43 @@ export function QuizSetupForm() {
           </div>
           
           {previousScores.length > 0 && (
-            <div className="space-y-2 p-3 bg-muted rounded-md">
-              <Label className="text-sm">Your previous scores:</Label>
-              <div className="space-y-2 max-h-32 overflow-y-auto">
-                {previousScores.map((score, index) => (
-                  <div key={index} className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <Badge variant={
-                        score.difficulty === "easy" ? "success" : 
-                        score.difficulty === "medium" ? "warning" : "destructive"
-                      }>
-                        {score.difficulty}
-                      </Badge>
-                      <span>{formatDate(score.date)}</span>
-                    </div>
-                    <span className="font-bold">{score.score} pts</span>
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <h3 className="font-medium mb-2">Your Previous Scores</h3>
+              
+              {bestScore && (
+                <div className="mb-3 p-2 bg-primary/10 rounded border border-primary/20">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">Best Score:</span>
+                    <span className="text-xl font-bold">{bestScore.score}</span>
                   </div>
-                ))}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Can you beat your previous scores?
-              </p>
+                  <div className="flex justify-between text-sm text-muted-foreground">
+                    <span>{bestScore.difficulty} difficulty</span>
+                    <span>{formatDate(bestScore.date)}</span>
+                  </div>
+                </div>
+              )}
+              
+              {recentScores.length > 0 && (
+                <>
+                  <h4 className="text-sm font-medium mb-1 mt-2">Recent Attempts:</h4>
+                  <div className="space-y-2">
+                    {recentScores.map((score, index) => (
+                      <div key={index} className="p-2 bg-background rounded border border-border flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Badge variant={
+                            score.difficulty === "easy" ? "success" : 
+                            score.difficulty === "medium" ? "warning" : "destructive"
+                          }>
+                            {score.difficulty}
+                          </Badge>
+                          <span className="text-sm">{formatDate(score.date)}</span>
+                        </div>
+                        <span className="font-semibold">{score.score} points</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
           

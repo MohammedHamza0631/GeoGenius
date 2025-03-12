@@ -114,6 +114,11 @@ export function PinEntry({
             ? "This PIN will be required when you use this username again."
             : "Forgot your PIN? You'll need to use a different username."}
         </p>
+        
+        <div className="text-xs text-muted-foreground text-center mt-2 p-2 bg-muted rounded-md">
+          <p className="font-medium mb-1">Security Note:</p>
+          <p>Your PIN is only stored securely on the server. For your protection, we never store your PIN in your browser.</p>
+        </div>
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button variant="outline" onClick={onCancel}>

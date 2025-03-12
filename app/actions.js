@@ -12,16 +12,48 @@ export async function saveScore(data) {
   try {
     const { username, score, difficulty } = data;
     
-    // Always create a new entry for each attempt
-    const entry = await prisma.leaderboardEntry.create({
-      data: {
+    // Check if the user already has an entry with a better or equal score
+    const existingBestScore = await prisma.leaderboardEntry.findFirst({
+      where: { 
         username,
-        score,
-        difficulty,
+        isBestScore: true 
       },
     });
     
-    return { success: true, entry };
+    // If this is a new best score or first attempt
+    if (!existingBestScore || existingBestScore.score < score) {
+      // If there's an existing best score, unmark it
+      if (existingBestScore) {
+        await prisma.leaderboardEntry.update({
+          where: { id: existingBestScore.id },
+          data: { isBestScore: false },
+        });
+      }
+      
+      // Create a new entry marked as the best score
+      const newEntry = await prisma.leaderboardEntry.create({
+        data: { 
+          username, 
+          score, 
+          difficulty,
+          isBestScore: true 
+        },
+      });
+      
+      return { success: true, entry: newEntry, isNewBest: true };
+    } else {
+      // Not a new best score, just create a regular entry
+      const newEntry = await prisma.leaderboardEntry.create({
+        data: { 
+          username, 
+          score, 
+          difficulty,
+          isBestScore: false 
+        },
+      });
+      
+      return { success: true, entry: newEntry, isNewBest: false };
+    }
   } catch (error) {
     console.error("Error saving score:", error);
     return { success: false, error: error.message };
@@ -41,25 +73,16 @@ export async function getLeaderboard(difficulty = "all") {
       };
     }
     
-    // Get all entries first
-    const allEntries = await prisma.leaderboardEntry.findMany({
-      where: difficulty !== "all" ? { difficulty } : {},
+    // Get only the best scores for each user
+    const bestScores = await prisma.leaderboardEntry.findMany({
+      where: {
+        ...(difficulty !== "all" ? { difficulty } : {}),
+        isBestScore: true
+      },
       orderBy: {
         score: 'desc',
       },
     });
-    
-    // Process to get only the best score for each username
-    const usernameMap = new Map();
-    
-    allEntries.forEach(entry => {
-      if (!usernameMap.has(entry.username) || usernameMap.get(entry.username).score < entry.score) {
-        usernameMap.set(entry.username, entry);
-      }
-    });
-    
-    // Convert map back to array and sort by score
-    const bestScores = Array.from(usernameMap.values()).sort((a, b) => b.score - a.score);
     
     return { 
       success: true, 

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PinEntry } from "@/components/pin-entry";
-import { storeVerifiedUser } from "@/lib/pin-utils";
+import { storeVerifiedSession } from "@/lib/pin-utils";
 
 export function QuizResults() {
   const { 
@@ -23,10 +23,13 @@ export function QuizResults() {
   const [pinError, setPinError] = useState(null);
   const [isSettingPin, setIsSettingPin] = useState(false);
   const [pinSetSuccess, setPinSetSuccess] = useState(false);
+  const [isNewBestScore, setIsNewBestScore] = useState(false);
   
   // Handle play again
   const handlePlayAgain = () => {
+    // First reset the quiz
     resetQuiz();
+    // Then redirect to /start
     window.location.href = "/start";
   };
   
@@ -52,6 +55,30 @@ export function QuizResults() {
     checkPinNeeded();
   }, [username, saveToLeaderboard, dbConnected]);
   
+  // Check if this is a new best score
+  useEffect(() => {
+    const checkIfNewBestScore = async () => {
+      if (!username || !saveToLeaderboard || !dbConnected) return;
+      
+      try {
+        // Get the user's best score
+        const response = await fetch(`/api/user-scores?username=${encodeURIComponent(username)}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          // If there's no previous best score, or this score is higher
+          if (!data.bestScore || score > data.bestScore.score) {
+            setIsNewBestScore(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking best score:', error);
+      }
+    };
+    
+    checkIfNewBestScore();
+  }, [username, score, saveToLeaderboard, dbConnected]);
+  
   // Handle PIN submission
   const handlePinSubmit = async (pin) => {
     setPinError(null);
@@ -70,8 +97,8 @@ export function QuizResults() {
       const data = await response.json();
       
       if (data.success) {
-        // Store in localStorage
-        storeVerifiedUser(username, pin);
+        // Mark username as verified in this session
+        storeVerifiedSession(username);
         setPinSetSuccess(true);
         setShowPinPrompt(false);
       } else {
@@ -91,7 +118,9 @@ export function QuizResults() {
   
   // Calculate average response time
   const totalResponseTime = answers.reduce((total, answer) => total + answer.responseTime, 0);
+  console.log(totalResponseTime);
   const averageResponseTime = answers.length > 0 ? (totalResponseTime / answers.length / 1000).toFixed(2) : 0;
+  console.log(averageResponseTime);
   
   // If showing PIN entry, render that instead of the results
   if (showPinPrompt) {
@@ -167,6 +196,12 @@ export function QuizResults() {
         {pinSetSuccess && (
           <div className="p-3 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-300 rounded-md text-sm text-center">
             PIN successfully set! Your username is now protected.
+          </div>
+        )}
+        
+        {isNewBestScore && (
+          <div className="p-3 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 rounded-md text-sm text-center">
+            🏆 New personal best! You've beaten your previous record!
           </div>
         )}
         

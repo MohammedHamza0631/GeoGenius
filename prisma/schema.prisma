@@ -18,6 +18,7 @@ model LeaderboardEntry {
   difficulty String
   date       DateTime @default(now())
   pinHash    String?  // Optional to support existing entries
+  isBestScore Boolean @default(false) // Track if this is the user's best score
   
   @@map("leaderboard_entries")
 }

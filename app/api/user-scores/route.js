@@ -23,20 +23,29 @@ export async function GET(request) {
       });
     }
 
-    // Fetch the user's previous scores
-    const scores = await prisma.leaderboardEntry.findMany({
+    // Fetch the user's best score
+    const bestScore = await prisma.leaderboardEntry.findFirst({
+      where: {
+        username: username,
+        isBestScore: true
+      },
+    });
+
+    // Fetch the user's recent attempts (limited to 3)
+    const recentScores = await prisma.leaderboardEntry.findMany({
       where: {
         username: username,
       },
       orderBy: {
         date: 'desc',
       },
-      take: 5, // Limit to the 5 most recent scores
+      take: 3, // Limit to the 3 most recent scores
     });
 
     return NextResponse.json({
       success: true,
-      scores,
+      bestScore: bestScore || null,
+      scores: recentScores,
       dbConnected: true
     });
   } catch (error) {
