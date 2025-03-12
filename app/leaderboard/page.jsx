@@ -3,9 +3,16 @@
 import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { getLeaderboard } from "@/app/actions";
 
 export default function LeaderboardPage() {
@@ -96,46 +103,50 @@ export default function LeaderboardPage() {
               </div>
             ) : (
               <div className="rounded-md border">
-                <div className="grid grid-cols-12 gap-2 p-4 font-medium border-b bg-muted text-sm sm:text-base">
-                  <div className="col-span-1">#</div>
-                  <div className="col-span-4 sm:col-span-4">Username</div>
-                  <div className="col-span-2 text-right">Score</div>
-                  <div className="col-span-3 sm:col-span-3">Difficulty</div>
-                  <div className="col-span-2 sm:col-span-2 text-right sm:text-left">Date</div>
-                </div>
-                
-                {leaderboardData.length > 0 ? (
-                  leaderboardData.map((entry, index) => (
-                    <div 
-                      key={entry.id} 
-                      className="grid grid-cols-12 gap-2 p-4 border-b last:border-0 items-center text-sm sm:text-base"
-                    >
-                      <div className="col-span-1 font-medium">{index + 1}</div>
-                      <div className="col-span-4 sm:col-span-4 font-medium truncate" title={entry.username}>
-                        {entry.username}
-                      </div>
-                      <div className="col-span-2 text-right font-bold">{entry.score}</div>
-                      <div className="col-span-3 sm:col-span-3">
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-xs font-medium whitespace-nowrap ${
-                          entry.difficulty === "easy" 
-                            ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
-                            : entry.difficulty === "medium"
-                            ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
-                            : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
-                        }`}>
-                          {entry.difficulty.charAt(0).toUpperCase() + entry.difficulty.slice(1)}
-                        </span>
-                      </div>
-                      <div className="col-span-2 sm:col-span-2 text-muted-foreground text-[10px] sm:text-sm text-right sm:text-left whitespace-nowrap">
-                        {formatDate(entry.date)}
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-8 text-center text-muted-foreground">
-                    No scores found for this difficulty level.
-                  </div>
-                )}
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]">#</TableHead>
+                      <TableHead>Username</TableHead>
+                      <TableHead className="text-right">Score</TableHead>
+                      <TableHead>Difficulty</TableHead>
+                      <TableHead className="text-right">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaderboardData.length > 0 ? (
+                      leaderboardData.map((entry, index) => (
+                        <TableRow key={entry.id}>
+                          <TableCell className="font-medium">{index + 1}</TableCell>
+                          <TableCell className="font-medium max-w-[120px] truncate" title={entry.username}>
+                            {entry.username}
+                          </TableCell>
+                          <TableCell className="text-right font-bold">{entry.score}</TableCell>
+                          <TableCell>
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${
+                              entry.difficulty === "easy" 
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
+                                : entry.difficulty === "medium"
+                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                                : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                            }`}>
+                              {entry.difficulty.charAt(0).toUpperCase() + entry.difficulty.slice(1)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right text-muted-foreground">
+                            {formatDate(entry.date)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                          No scores found for this difficulty level.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </CardContent>
