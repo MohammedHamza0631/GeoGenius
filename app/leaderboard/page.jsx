@@ -96,25 +96,27 @@ export default function LeaderboardPage() {
               </div>
             ) : (
               <div className="rounded-md border">
-                <div className="grid grid-cols-12 gap-2 p-4 font-medium border-b bg-muted">
+                <div className="grid grid-cols-12 gap-2 p-4 font-medium border-b bg-muted text-sm sm:text-base">
                   <div className="col-span-1">#</div>
-                  <div className="col-span-4">Username</div>
+                  <div className="col-span-4 sm:col-span-4">Username</div>
                   <div className="col-span-2 text-right">Score</div>
-                  <div className="col-span-3">Difficulty</div>
-                  <div className="col-span-2">Date</div>
+                  <div className="col-span-3 sm:col-span-3">Difficulty</div>
+                  <div className="col-span-2 sm:col-span-2 text-right sm:text-left">Date</div>
                 </div>
                 
                 {leaderboardData.length > 0 ? (
                   leaderboardData.map((entry, index) => (
                     <div 
                       key={entry.id} 
-                      className="grid grid-cols-12 gap-2 p-4 border-b last:border-0 items-center"
+                      className="grid grid-cols-12 gap-2 p-4 border-b last:border-0 items-center text-sm sm:text-base"
                     >
                       <div className="col-span-1 font-medium">{index + 1}</div>
-                      <div className="col-span-4 font-medium">{entry.username}</div>
+                      <div className="col-span-4 sm:col-span-4 font-medium truncate" title={entry.username}>
+                        {entry.username}
+                      </div>
                       <div className="col-span-2 text-right font-bold">{entry.score}</div>
-                      <div className="col-span-3">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      <div className="col-span-3 sm:col-span-3">
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] sm:text-xs font-medium whitespace-nowrap ${
                           entry.difficulty === "easy" 
                             ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300" 
                             : entry.difficulty === "medium"
@@ -124,7 +126,7 @@ export default function LeaderboardPage() {
                           {entry.difficulty.charAt(0).toUpperCase() + entry.difficulty.slice(1)}
                         </span>
                       </div>
-                      <div className="col-span-2 text-muted-foreground text-sm">
+                      <div className="col-span-2 sm:col-span-2 text-muted-foreground text-[10px] sm:text-sm text-right sm:text-left whitespace-nowrap">
                         {formatDate(entry.date)}
                       </div>
                     </div>
