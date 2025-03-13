@@ -31,7 +31,8 @@ export function QuizSetupForm() {
     saveToLeaderboard, 
     setSaveToLeaderboard,
     startQuiz,
-    dbConnected
+    dbConnected,
+    resetQuiz
   } = useQuiz();
   
   const [errors, setErrors] = useState({});
@@ -237,6 +238,10 @@ export function QuizSetupForm() {
       return;
     }
     
+    // Always reset the quiz before starting a new game
+    // This ensures a clean state for the new quiz
+    resetQuiz();
+    
     // Check if PIN verification is needed
     if (usernameExists && usernameHasPin) {
       // Check if already verified in this session
@@ -342,7 +347,7 @@ export function QuizSetupForm() {
               <p className="text-sm text-amber-500">
                 {isVerifiedInSession(username) 
                   ? "This username is already verified in this session."
-                  : "This username is protected with a PIN. You'll need to enter it to continue."}
+                  : "This username is in use. Enter the PIN to use it or create a new one."}
               </p>
             )}
             {usernameExists && !isCheckingUsername && !usernameHasPin && (
@@ -374,7 +379,7 @@ export function QuizSetupForm() {
               
               {recentScores.length > 0 && (
                 <>
-                  <h4 className="text-sm font-medium mb-1 mt-2">Recent Attempts:</h4>
+                  <h4 className="text-sm font-medium mb-1 mt-2">Your Scores by Difficulty:</h4>
                   <div className="space-y-2">
                     {recentScores.map((score, index) => (
                       <div key={index} className="p-2 bg-background rounded border border-border flex justify-between items-center">

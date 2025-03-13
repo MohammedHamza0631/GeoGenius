@@ -31,21 +31,21 @@ export async function GET(request) {
       },
     });
 
-    // Fetch the user's recent attempts (limited to 3)
-    const recentScores = await prisma.leaderboardEntry.findMany({
+    // Fetch all difficulty entries for this user
+    // Since we now only store one entry per difficulty, these are the user's scores across different difficulties
+    const allScores = await prisma.leaderboardEntry.findMany({
       where: {
         username: username,
       },
       orderBy: {
         date: 'desc',
       },
-      take: 3, // Limit to the 3 most recent scores
     });
 
     return NextResponse.json({
       success: true,
       bestScore: bestScore || null,
-      scores: recentScores,
+      scores: allScores,
       dbConnected: true
     });
   } catch (error) {

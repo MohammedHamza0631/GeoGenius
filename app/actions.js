@@ -12,7 +12,15 @@ export async function saveScore(data) {
   try {
     const { username, score, difficulty } = data;
     
-    // Check if the user already has an entry with a better or equal score
+    // Find the existing entry for this user with the same difficulty
+    const existingEntry = await prisma.leaderboardEntry.findFirst({
+      where: { 
+        username,
+        difficulty
+      },
+    });
+    
+    // Find the current best score for this user (across all difficulties)
     const existingBestScore = await prisma.leaderboardEntry.findFirst({
       where: { 
         username,
@@ -20,40 +28,46 @@ export async function saveScore(data) {
       },
     });
     
-    // If this is a new best score or first attempt
-    if (!existingBestScore || existingBestScore.score < score) {
-      // If there's an existing best score, unmark it
-      if (existingBestScore) {
-        await prisma.leaderboardEntry.update({
-          where: { id: existingBestScore.id },
-          data: { isBestScore: false },
-        });
-      }
-      
-      // Create a new entry marked as the best score
-      const newEntry = await prisma.leaderboardEntry.create({
-        data: { 
-          username, 
-          score, 
-          difficulty,
-          isBestScore: true 
-        },
+    // Check if this is a new best score overall
+    const isNewBestScore = !existingBestScore || score > existingBestScore.score;
+    
+    // If this is a new best score, update the previous best to not be the best anymore
+    if (isNewBestScore && existingBestScore) {
+      await prisma.leaderboardEntry.update({
+        where: { id: existingBestScore.id },
+        data: { isBestScore: false },
       });
-      
-      return { success: true, entry: newEntry, isNewBest: true };
-    } else {
-      // Not a new best score, just create a regular entry
-      const newEntry = await prisma.leaderboardEntry.create({
-        data: { 
-          username, 
-          score, 
-          difficulty,
-          isBestScore: false 
-        },
-      });
-      
-      return { success: true, entry: newEntry, isNewBest: false };
     }
+    
+    let entry;
+    
+    // If an entry already exists for this user and difficulty, update it
+    if (existingEntry) {
+      entry = await prisma.leaderboardEntry.update({
+        where: { id: existingEntry.id },
+        data: { 
+          score: Math.max(existingEntry.score, score), // Keep the higher score
+          date: new Date(), // Update the date to the latest attempt
+          isBestScore: isNewBestScore // Mark as best score if it's the new best
+        },
+      });
+    } else {
+      // Create a new entry if one doesn't exist for this user and difficulty
+      entry = await prisma.leaderboardEntry.create({
+        data: { 
+          username, 
+          score, 
+          difficulty,
+          isBestScore: isNewBestScore
+        },
+      });
+    }
+    
+    return { 
+      success: true, 
+      entry, 
+      isNewBest: isNewBestScore 
+    };
   } catch (error) {
     console.error("Error saving score:", error);
     return { success: false, error: error.message };

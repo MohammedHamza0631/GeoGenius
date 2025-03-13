@@ -27,10 +27,12 @@ export function QuizResults() {
   
   // Handle play again
   const handlePlayAgain = () => {
-    // First reset the quiz
-    resetQuiz();
-    // Then redirect to /start
+    // Redirect to /start without resetting the quiz
+    // This preserves the session verification status
     window.location.href = "/start";
+    
+    // Note: We don't call resetQuiz() here anymore
+    // The quiz will be reset when the user starts a new game from the start page
   };
   
   // Check if we need to prompt for PIN creation
