@@ -103,7 +103,7 @@ export function PinEntry({
             </div>
             {pinMismatch && (
               <p className="text-sm text-red-500 text-center mt-2">
-                PINs don't match. Please try again.
+                PINs don&apos;t match. Please try again.
               </p>
             )}
           </div>

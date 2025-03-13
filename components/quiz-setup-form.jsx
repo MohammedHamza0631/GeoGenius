@@ -326,7 +326,7 @@ export function QuizSetupForm() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Note: If you select a username with a PIN, you'll need to enter it to continue.
+                  Note: If you select a username with a PIN, you&apos;ll need to enter it to continue.
                 </p>
               </div>
             )}

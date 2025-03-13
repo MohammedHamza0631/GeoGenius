@@ -183,7 +183,7 @@ export function QuizResults() {
       <CardHeader>
         <CardTitle className="text-2xl">Quiz Results</CardTitle>
         <CardDescription>
-          Here's how you did, {username}!
+          Here&apos;s how you did, {username}!
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -230,7 +230,7 @@ export function QuizResults() {
         
         {isNewBestScore && (
           <div className="p-3 bg-amber-100 dark:bg-amber-900 text-amber-800 dark:text-amber-300 rounded-md text-sm text-center">
-            🏆 New personal best! You've beaten your previous record!
+            🏆 New personal best! You&apos;ve beaten your previous record!
           </div>
         )}
         
