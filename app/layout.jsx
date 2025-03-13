@@ -7,7 +7,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  title: "Capital Cities Quiz",
+  title: "GeoGenius",
   description: "Test your knowledge of world capital cities",
 };
 

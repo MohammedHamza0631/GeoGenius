@@ -71,7 +71,7 @@ export default function LeaderboardPage() {
               <div>
                 <CardTitle>Top Scores</CardTitle>
                 <CardDescription>
-                  The highest scores from Capital Cities Quiz players
+                  The highest scores from GeoGenius players
                 </CardDescription>
               </div>
               

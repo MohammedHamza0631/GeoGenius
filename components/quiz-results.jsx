@@ -116,11 +116,36 @@ export function QuizResults() {
   const correctAnswers = answers.filter(a => a.isCorrect).length;
   const accuracy = answers.length > 0 ? Math.round((correctAnswers / answers.length) * 100) : 0;
   
-  // Calculate average response time
-  const totalResponseTime = answers.reduce((total, answer) => total + answer.responseTime, 0);
-  console.log(totalResponseTime);
-  const averageResponseTime = answers.length > 0 ? (totalResponseTime / answers.length / 1000).toFixed(2) : 0;
-  console.log(averageResponseTime);
+  // Calculate average response time - using timeRemaining instead of responseTime
+  // We need to get the time per question from quiz settings based on difficulty
+  const getTimePerQuestion = (difficulty) => {
+    const difficultySettings = {
+      easy: 20, // 20 seconds for easy questions
+      medium: 15, // 15 seconds for medium questions
+      hard: 8 // 8 seconds for hard questions
+    };
+    return difficultySettings[difficulty] || 15; // Default to 15 seconds if difficulty not found
+  };
+  
+  // Calculate response time for each answer (total time - time remaining)
+  const totalResponseTime = answers.reduce((total, answer) => {
+    try {
+      const totalTimeForQuestion = getTimePerQuestion(answer.difficulty);
+      // Ensure timeRemaining is a number and not greater than the total time
+      const timeRemaining = typeof answer.timeRemaining === 'number' ? 
+        Math.min(answer.timeRemaining, totalTimeForQuestion) : 0;
+      const responseTime = totalTimeForQuestion - timeRemaining;
+      return total + responseTime;
+    } catch (error) {
+      console.error('Error calculating response time:', error);
+      return total;
+    }
+  }, 0);
+  
+  // Calculate average response time in seconds with error handling
+  const averageResponseTime = answers.length > 0 
+    ? ((isNaN(totalResponseTime) ? 0 : totalResponseTime) / answers.length).toFixed(2) 
+    : "0.00";
   
   // If showing PIN entry, render that instead of the results
   if (showPinPrompt) {
@@ -179,7 +204,9 @@ export function QuizResults() {
             <p className="text-sm text-muted-foreground">Questions Answered</p>
           </div>
           <div className="p-4 bg-muted rounded-lg">
-            <div className="text-2xl font-bold mb-1">{averageResponseTime}s</div>
+            <div className="text-2xl font-bold mb-1">
+              {isNaN(averageResponseTime) ? "0.00s" : `${averageResponseTime}s`}
+            </div>
             <p className="text-sm text-muted-foreground">Avg. Response Time</p>
           </div>
         </div>
