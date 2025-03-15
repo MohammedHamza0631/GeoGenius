@@ -60,7 +60,7 @@ export function QuizResults() {
   // Check if this is a new best score
   useEffect(() => {
     const checkIfNewBestScore = async () => {
-      if (!username || !saveToLeaderboard || !dbConnected) return;
+      if (!username || !saveToLeaderboard || !dbConnected || score <= 0) return;
       
       try {
         // Get the user's best score
@@ -68,8 +68,15 @@ export function QuizResults() {
         const data = await response.json();
         
         if (data.success) {
-          // If there's no previous best score, or this score is higher
-          if (!data.bestScore || score > data.bestScore.score) {
+          // Check if this is a new best score overall
+          const isOverallBest = !data.bestScore || score > data.bestScore.score;
+          
+          // Check if this is a new best score for this difficulty
+          const bestForDifficulty = data.bestScoresByDifficulty?.[currentDifficulty]?.score || 0;
+          const isDifficultyBest = score > bestForDifficulty;
+          
+          // Set as new best if it's either a new overall best or a new best for this difficulty
+          if (isOverallBest || isDifficultyBest) {
             setIsNewBestScore(true);
           }
         }
@@ -79,7 +86,7 @@ export function QuizResults() {
     };
     
     checkIfNewBestScore();
-  }, [username, score, saveToLeaderboard, dbConnected]);
+  }, [username, score, saveToLeaderboard, dbConnected, currentDifficulty]);
   
   // Handle PIN submission
   const handlePinSubmit = async (pin) => {

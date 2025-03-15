@@ -31,21 +31,34 @@ export async function GET(request) {
       },
     });
 
-    // Fetch all difficulty entries for this user
-    // Since we now only store one entry per difficulty, these are the user's scores across different difficulties
+    // Fetch all scores for this user
     const allScores = await prisma.leaderboardEntry.findMany({
       where: {
         username: username,
       },
-      orderBy: {
-        date: 'desc',
-      },
+      orderBy: [
+        {
+          difficulty: 'asc',
+        },
+        {
+          score: 'desc',
+        }
+      ],
+    });
+
+    // Group scores by difficulty to easily find the best score for each difficulty
+    const scoresByDifficulty = {};
+    allScores.forEach(score => {
+      if (!scoresByDifficulty[score.difficulty] || scoresByDifficulty[score.difficulty].score < score.score) {
+        scoresByDifficulty[score.difficulty] = score;
+      }
     });
 
     return NextResponse.json({
       success: true,
       bestScore: bestScore || null,
       scores: allScores,
+      bestScoresByDifficulty: scoresByDifficulty,
       dbConnected: true
     });
   } catch (error) {

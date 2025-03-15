@@ -28,8 +28,13 @@ export async function saveScore(data) {
       },
     });
     
-    // Check if this is a new best score overall
-    const isNewBestScore = !existingBestScore || score > existingBestScore.score;
+    // Determine if the new score is higher than the existing score for this difficulty
+    const isHigherScoreForDifficulty = !existingEntry || score > existingEntry.score;
+    
+    // Only consider this a new best score if it's higher than the existing score for this difficulty
+    // AND it's higher than the user's current best score across all difficulties
+    const isNewBestScore = isHigherScoreForDifficulty && 
+                          (!existingBestScore || score > existingBestScore.score);
     
     // If this is a new best score, update the previous best to not be the best anymore
     if (isNewBestScore && existingBestScore) {
@@ -43,12 +48,19 @@ export async function saveScore(data) {
     
     // If an entry already exists for this user and difficulty, update it
     if (existingEntry) {
+      // Only update the score if the new score is higher
+      const newScore = Math.max(existingEntry.score, score);
+      
+      // Only update isBestScore if the score is actually changing
+      const updateIsBestScore = newScore !== existingEntry.score && isNewBestScore;
+      
       entry = await prisma.leaderboardEntry.update({
         where: { id: existingEntry.id },
         data: { 
-          score: Math.max(existingEntry.score, score), // Keep the higher score
+          score: newScore,
           date: new Date(), // Update the date to the latest attempt
-          isBestScore: isNewBestScore // Mark as best score if it's the new best
+          // Only change isBestScore if the score is actually being updated to a higher value
+          ...(newScore !== existingEntry.score ? { isBestScore: isNewBestScore } : {})
         },
       });
     } else {
