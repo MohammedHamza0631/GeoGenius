@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useQuiz } from "@/lib/quiz-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +56,30 @@ export function QuizQuestion() {
     }
   }, [timeLeft, maxTime]);
   
+  const handleAnswer = useCallback((option) => {
+    if (isAnswered) return;
+    
+    // Clear timers
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
+    
+    setSelectedOption(option);
+    setIsAnswered(true);
+    setCorrectAnswer(currentQuestion?.capital);
+    
+    // Short delay to show the selected answer before moving to next question
+    setTimeout(() => {
+      answerQuestion(option, timeLeft);
+      setIsAnswered(false);
+      setSelectedOption(null);
+      setCorrectAnswer(null);
+    }, 1500); // Increased to 1.5 seconds to give users more time to see the correct answer
+  }, [isAnswered, currentQuestion, timeLeft, answerQuestion]);
+  
   // Smooth timer animation
   useEffect(() => {
     if (isAnswered) return;
@@ -109,31 +133,7 @@ export function QuizQuestion() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [timeLeft, isAnswered, maxTime, setTimeLeft, currentQuestion, answerQuestion]);
-  
-  const handleAnswer = (option) => {
-    if (isAnswered) return;
-    
-    // Clear timers
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    setSelectedOption(option);
-    setIsAnswered(true);
-    setCorrectAnswer(currentQuestion.capital);
-    
-    // Short delay to show the selected answer before moving to next question
-    setTimeout(() => {
-      answerQuestion(option, timeLeft);
-      setIsAnswered(false);
-      setSelectedOption(null);
-      setCorrectAnswer(null);
-    }, 1500); // Increased to 1.5 seconds to give users more time to see the correct answer
-  };
+  }, [timeLeft, isAnswered, maxTime, setTimeLeft, currentQuestion, answerQuestion, handleAnswer]);
   
   if (!currentQuestion) return null;
   

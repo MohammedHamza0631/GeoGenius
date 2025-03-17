@@ -23,8 +23,9 @@ const throttle = (func, limit) => {
 export function Globe({
   className,
 }) {
-  let phi = 0;
-  let width = 0;
+  // Convert variables to refs to fix linter warnings
+  const phiRef = useRef(0);
+  const widthRef = useRef(0);
   const canvasRef = useRef(null);
   const pointerInteracting = useRef(null);
   const pointerInteractionMovement = useRef(0);
@@ -55,6 +56,10 @@ export function Globe({
   }, THROTTLE_MS);
 
   useEffect(() => {
+    // Store these in local variables for cleanup - fixes the linter warnings
+    let localAnimationFrameId = null;
+    const canvasRefValue = canvasRef.current;
+    
     // Dynamically import cobe to avoid SSR issues
     const initGlobe = async () => {
       try {
@@ -63,11 +68,11 @@ export function Globe({
         // Define onResize function and store it in a ref so we can access it in cleanup
         onResizeRef.current = throttle(() => {
           if (canvasRef.current) {
-            width = canvasRef.current.offsetWidth;
+            widthRef.current = canvasRef.current.offsetWidth;
             if (globeInstanceRef.current) {
               // Update existing globe dimensions if already created
               if (globeInstanceRef.current.resize) {
-                globeInstanceRef.current.resize(width * 2, width * 2);
+                globeInstanceRef.current.resize(widthRef.current * 2, widthRef.current * 2);
               }
             }
           }
@@ -78,21 +83,21 @@ export function Globe({
 
         // Restored original configuration but with performance improvements
         const GLOBE_CONFIG = {
-          width: width * 2,
-          height: width * 2,
+          width: widthRef.current * 2,
+          height: widthRef.current * 2,
           onRender: (state) => {
             // Only update phi if not interacting
-            if (!pointerInteracting.current) phi += 0.005;
-            state.phi = phi + rs.get();
-            state.width = width * 2;
-            state.height = width * 2;
+            if (!pointerInteracting.current) phiRef.current += 0.005;
+            state.phi = phiRef.current + rs.get();
+            state.width = widthRef.current * 2;
+            state.height = widthRef.current * 2;
           },
           devicePixelRatio: 2,
           phi: 0,
           theta: 0.3,
           dark: 0,
           diffuse: 0.4,
-          mapSamples: 10000, // Restored original value
+          mapSamples: 16000, // Restored original value
           mapBrightness: 1.2,
           baseColor: [1, 1, 1],
           markerColor: [0.4, 0.4, 0.9],
@@ -103,17 +108,28 @@ export function Globe({
             { location: [23.8103, 90.4125], size: 0.05 },
             { location: [30.0444, 31.2357], size: 0.07 },
             { location: [39.9042, 116.4074], size: 0.08 },
-
+            { location: [-23.5505, -46.6333], size: 0.1 },
+            { location: [19.4326, -99.1332], size: 0.1 },
+            { location: [40.7128, -74.006], size: 0.1 },
+            { location: [34.6937, 135.5022], size: 0.05 },
+            { location: [41.0082, 28.9784], size: 0.06 },
           ],
         };
 
         // Store the globe instance for cleanup
         globeInstanceRef.current = createGlobe(canvasRef.current, GLOBE_CONFIG);
 
+        // Store animation frame ID in the local variable
+        if (animationFrameId.current) {
+          localAnimationFrameId = animationFrameId.current;
+        }
+
         // Fade in the globe
         if (canvasRef.current) {
           setTimeout(() => {
-            canvasRef.current.style.opacity = "1";
+            if (canvasRef.current) {
+              canvasRef.current.style.opacity = "1";
+            }
           }, 100);
         }
       } catch (error) {
@@ -130,8 +146,8 @@ export function Globe({
       });
     }, { threshold: 0.1 });
 
-    if (canvasRef.current) {
-      observer.observe(canvasRef.current);
+    if (canvasRefValue) {
+      observer.observe(canvasRefValue);
     }
     
     return () => {
@@ -143,11 +159,13 @@ export function Globe({
         globeInstanceRef.current.destroy();
         globeInstanceRef.current = null;
       }
-      if (animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
+      // Use the local variable instead of the ref directly
+      if (localAnimationFrameId) {
+        cancelAnimationFrame(localAnimationFrameId);
       }
-      if (canvasRef.current) {
-        observer.unobserve(canvasRef.current);
+      // Use the captured value rather than the ref's current value
+      if (canvasRefValue) {
+        observer.unobserve(canvasRefValue);
       }
       observer.disconnect();
     };
