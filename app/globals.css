@@ -8,7 +8,33 @@
   }
 }
 
+@keyframes textGlow {
+  0%, 100% {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 15px rgba(59, 130, 246, 0.8);
+  }
+  50% {
+    text-shadow: 0 0 16px rgba(255, 255, 255, 0.8), 0 0 25px rgba(59, 130, 246, 0.8);
+  }
+}
 
+@keyframes backgroundPulse {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.text-glow {
+  animation: textGlow 2s ease-in-out infinite;
+}
+
+.bg-pulse {
+  animation: backgroundPulse 3s ease-in-out infinite;
+}
 
 @layer base {
   :root {
