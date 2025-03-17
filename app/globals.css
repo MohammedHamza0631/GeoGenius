@@ -28,12 +28,27 @@
   }
 }
 
+@keyframes globeGlow {
+  0%, 100% {
+    opacity: 0.65;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 0.8;
+    filter: blur(1px);
+  }
+}
+
 .text-glow {
   animation: textGlow 2s ease-in-out infinite;
 }
 
 .bg-pulse {
   animation: backgroundPulse 3s ease-in-out infinite;
+}
+
+.globe-glow {
+  animation: globeGlow 8s ease-in-out infinite;
 }
 
 @layer base {

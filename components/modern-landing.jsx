@@ -159,6 +159,66 @@ export function ModernLanding({
   badge = "Capital Cities Quiz",
 }) {
   const words = title.split(" ");
+  const [showGlobe, setShowGlobe] = useState(true);
+  const [isClient, setIsClient] = useState(false);
+
+  // Only render Globe on client side and check for device capabilities
+  useEffect(() => {
+    setIsClient(true);
+    
+    // Disable globe on low-end devices or when battery is low
+    const checkDeviceCapabilities = () => {
+      // Check if device is likely low-powered (simple heuristic)
+      const isLowPowered = window.navigator.hardwareConcurrency 
+        ? window.navigator.hardwareConcurrency <= 2
+        : false;
+      
+      // Check if it's a mobile device
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+      
+      // Check battery status if available
+      if (navigator.getBattery) {
+        navigator.getBattery().then(battery => {
+          if (battery.level < 0.2 && !battery.charging) {
+            setShowGlobe(false);
+          }
+        }).catch(() => {
+          // Battery API not available, fallback to device detection
+          setShowGlobe(!isLowPowered || !isMobile);
+        });
+      } else {
+        // Battery API not available, fallback to device detection
+        setShowGlobe(!isLowPowered || !isMobile);
+      }
+    };
+    
+    checkDeviceCapabilities();
+    
+    // Add performance observer to disable globe if page is lagging
+    if ('PerformanceObserver' in window) {
+      const observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          // If frame rate drops below threshold, disable globe
+          if (entry.name === 'frame-rate' && entry.value < 30) {
+            setShowGlobe(false);
+            observer.disconnect();
+            break;
+          }
+        }
+      });
+      
+      // Observe frame rate if supported
+      try {
+        observer.observe({ entryTypes: ['frame-rate'] });
+      } catch (e) {
+        // Frame rate observation not supported
+      }
+      
+      return () => observer.disconnect();
+    }
+  }, []);
 
   return (
     <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background">
@@ -171,10 +231,12 @@ export function ModernLanding({
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.05] via-transparent to-indigo-500/[0.05] blur-3xl" />
 
-      {/* Globe */}
-      <div className="absolute inset-0 opacity-70 pointer-events-none">
-        <Globe className="top-[10%] md:top-[5%]" />
-      </div>
+      {/* Globe - conditionally rendered for performance */}
+      {isClient && showGlobe && (
+        <div className="absolute inset-0 opacity-70 pointer-events-none globe-glow">
+          <Globe className="top-[10%] md:top-[5%]" />
+        </div>
+      )}
 
       {/* Floating images */}
       <div className="absolute inset-0 overflow-hidden">
@@ -273,7 +335,7 @@ export function ModernLanding({
                 style={{ boxShadow: "0 0 25px rgba(59,130,246,0.6)" }}
               ></div>
               <span className="text-white font-semibold tracking-wide">
-                A quiz that's{" "}
+                A quiz that&apos;s{" "}
                 <RotatingText 
                   words={rotatingWords} 
                   className="text-white font-extrabold relative"

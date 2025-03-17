@@ -4,6 +4,21 @@ import { useEffect, useRef } from "react";
 import { useMotionValue, useSpring } from "framer-motion";
 
 const MOVEMENT_DAMPING = 1400;
+const THROTTLE_MS = 16; // ~60fps throttle
+
+// Throttle function to limit frequent updates
+const throttle = (func, limit) => {
+  let inThrottle;
+  return function() {
+    const args = arguments;
+    const context = this;
+    if (!inThrottle) {
+      func.apply(context, args);
+      inThrottle = true;
+      setTimeout(() => inThrottle = false, limit);
+    }
+  };
+};
 
 export function Globe({
   className,
@@ -13,6 +28,9 @@ export function Globe({
   const canvasRef = useRef(null);
   const pointerInteracting = useRef(null);
   const pointerInteractionMovement = useRef(0);
+  const globeInstanceRef = useRef(null);
+  const animationFrameId = useRef(null);
+  const onResizeRef = useRef(null);
 
   const r = useMotionValue(0);
   const rs = useSpring(r, {
@@ -28,76 +46,111 @@ export function Globe({
     }
   };
 
-  const updateMovement = (clientX) => {
+  const updateMovement = throttle((clientX) => {
     if (pointerInteracting.current !== null) {
       const delta = clientX - pointerInteracting.current;
       pointerInteractionMovement.current = delta;
       r.set(r.get() + delta / MOVEMENT_DAMPING);
     }
-  };
+  }, THROTTLE_MS);
 
   useEffect(() => {
     // Dynamically import cobe to avoid SSR issues
     const initGlobe = async () => {
-      const createGlobe = (await import("cobe")).default;
-      
-      const onResize = () => {
+      try {
+        const createGlobe = (await import("cobe")).default;
+        
+        // Define onResize function and store it in a ref so we can access it in cleanup
+        onResizeRef.current = throttle(() => {
+          if (canvasRef.current) {
+            width = canvasRef.current.offsetWidth;
+            if (globeInstanceRef.current) {
+              // Update existing globe dimensions if already created
+              if (globeInstanceRef.current.resize) {
+                globeInstanceRef.current.resize(width * 2, width * 2);
+              }
+            }
+          }
+        }, 100); // Less frequent resize handling
+
+        window.addEventListener("resize", onResizeRef.current);
+        onResizeRef.current();
+
+        // Restored original configuration but with performance improvements
+        const GLOBE_CONFIG = {
+          width: width * 2,
+          height: width * 2,
+          onRender: (state) => {
+            // Only update phi if not interacting
+            if (!pointerInteracting.current) phi += 0.005;
+            state.phi = phi + rs.get();
+            state.width = width * 2;
+            state.height = width * 2;
+          },
+          devicePixelRatio: 2,
+          phi: 0,
+          theta: 0.3,
+          dark: 0,
+          diffuse: 0.4,
+          mapSamples: 10000, // Restored original value
+          mapBrightness: 1.2,
+          baseColor: [1, 1, 1],
+          markerColor: [0.4, 0.4, 0.9],
+          glowColor: [1, 1, 1],
+          markers: [
+            { location: [14.5995, 120.9842], size: 0.03 },
+            { location: [19.076, 72.8777], size: 0.1 },
+            { location: [23.8103, 90.4125], size: 0.05 },
+            { location: [30.0444, 31.2357], size: 0.07 },
+            { location: [39.9042, 116.4074], size: 0.08 },
+
+          ],
+        };
+
+        // Store the globe instance for cleanup
+        globeInstanceRef.current = createGlobe(canvasRef.current, GLOBE_CONFIG);
+
+        // Fade in the globe
         if (canvasRef.current) {
-          width = canvasRef.current.offsetWidth;
+          setTimeout(() => {
+            canvasRef.current.style.opacity = "1";
+          }, 100);
         }
-      };
-
-      window.addEventListener("resize", onResize);
-      onResize();
-
-      const GLOBE_CONFIG = {
-        width: width * 2,
-        height: width * 2,
-        onRender: (state) => {
-          if (!pointerInteracting.current) phi += 0.005;
-          state.phi = phi + rs.get();
-          state.width = width * 2;
-          state.height = width * 2;
-        },
-        devicePixelRatio: 2,
-        phi: 0,
-        theta: 0.3,
-        dark: 0,
-        diffuse: 0.4,
-        mapSamples: 16000,
-        mapBrightness: 1.2,
-        baseColor: [1, 1, 1],
-        markerColor: [0.4, 0.4, 0.9],
-        glowColor: [1, 1, 1],
-        markers: [
-          { location: [51.5074, -0.1278], size: 0.05 }, // London
-          { location: [48.8566, 2.3522], size: 0.05 },  // Paris
-          { location: [40.7128, -74.0060], size: 0.05 }, // New York
-          { location: [35.6762, 139.6503], size: 0.05 }, // Tokyo
-          { location: [55.7558, 37.6173], size: 0.05 },  // Moscow
-          { location: [-33.8688, 151.2093], size: 0.05 }, // Sydney
-          { location: [19.4326, -99.1332], size: 0.05 },  // Mexico City
-          { location: [-22.9068, -43.1729], size: 0.05 },  // Rio de Janeiro
-          { location: [37.7749, -122.4194], size: 0.05 },  // San Francisco
-          { location: [41.9028, 12.4964], size: 0.05 },    // Rome
-        ],
-      };
-
-      const globe = createGlobe(canvasRef.current, GLOBE_CONFIG);
-
-      setTimeout(() => {
-        if (canvasRef.current) {
-          canvasRef.current.style.opacity = "1";
-        }
-      }, 0);
-      
-      return () => {
-        globe.destroy();
-        window.removeEventListener("resize", onResize);
-      };
+      } catch (error) {
+        console.error("Failed to initialize globe:", error);
+      }
     };
 
-    initGlobe();
+    // Only initialize if component is visible in viewport
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !globeInstanceRef.current) {
+          initGlobe();
+        }
+      });
+    }, { threshold: 0.1 });
+
+    if (canvasRef.current) {
+      observer.observe(canvasRef.current);
+    }
+    
+    return () => {
+      // Clean up all resources
+      if (onResizeRef.current) {
+        window.removeEventListener("resize", onResizeRef.current);
+      }
+      if (globeInstanceRef.current) {
+        globeInstanceRef.current.destroy();
+        globeInstanceRef.current = null;
+      }
+      if (animationFrameId.current) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+      if (canvasRef.current) {
+        observer.unobserve(canvasRef.current);
+      }
+      observer.disconnect();
+    };
   }, [rs]);
 
   return (
