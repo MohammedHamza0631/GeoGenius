@@ -6,7 +6,7 @@ import { ModernLanding } from "@/components/modern-landing";
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen overflow-hidden">
       <Header />
       
       <main className="flex-1">

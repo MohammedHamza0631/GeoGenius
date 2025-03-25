@@ -6,7 +6,7 @@ import { ArrowRightIcon, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { Globe } from "@/components/globe";
+import { HeroHighlight, Highlight } from "@/components/ui/hero-highlight";
 
 const FloatingImage = ({
   src,
@@ -99,54 +99,6 @@ const RotatingText = ({ words, className }) => {
   );
 };
 
-// Background paths component
-const FloatingPaths = ({ position }) => {
-  const paths = Array.from({ length: 36 }, (_, i) => ({
-    id: i,
-    d: `M-${380 - i * 5 * position} -${189 + i * 6}C-${
-      380 - i * 5 * position
-    } -${189 + i * 6} -${312 - i * 5 * position} ${216 - i * 6} ${
-      152 - i * 5 * position
-    } ${343 - i * 6}C${616 - i * 5 * position} ${470 - i * 6} ${
-      684 - i * 5 * position
-    } ${875 - i * 6} ${684 - i * 5 * position} ${875 - i * 6}`,
-    color: `rgba(15,23,42,${0.1 + i * 0.03})`,
-    width: 0.5 + i * 0.03,
-  }));
-
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      <svg
-        className="w-full h-full text-slate-950 dark:text-white"
-        viewBox="0 0 696 316"
-        fill="none"
-      >
-        <title>Background Paths</title>
-        {paths.map((path) => (
-          <motion.path
-            key={path.id}
-            d={path.d}
-            stroke="currentColor"
-            strokeWidth={path.width}
-            strokeOpacity={0.1 + path.id * 0.03}
-            initial={{ pathLength: 0.3, opacity: 0.6 }}
-            animate={{
-              pathLength: 1,
-              opacity: [0.3, 0.6, 0.3],
-              pathOffset: [0, 1, 0],
-            }}
-            transition={{
-              duration: 20 + Math.random() * 10,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "linear",
-            }}
-          />
-        ))}
-      </svg>
-    </div>
-  );
-};
-
 export function ModernLanding({
   title = "Explore World",
   subtitle = "Capitals",
@@ -159,87 +111,11 @@ export function ModernLanding({
   badge = "Capital Cities Quiz",
 }) {
   const words = title.split(" ");
-  const [showGlobe, setShowGlobe] = useState(true);
-  const [isClient, setIsClient] = useState(false);
-
-  // Only render Globe on client side and check for device capabilities
-  useEffect(() => {
-    setIsClient(true);
-    
-    // Disable globe on low-end devices or when battery is low
-    const checkDeviceCapabilities = () => {
-      // Check if device is likely low-powered (simple heuristic)
-      const isLowPowered = window.navigator.hardwareConcurrency 
-        ? window.navigator.hardwareConcurrency <= 2
-        : false;
-      
-      // Check if it's a mobile device
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      );
-      
-      // Check battery status if available
-      if (navigator.getBattery) {
-        navigator.getBattery().then(battery => {
-          if (battery.level < 0.2 && !battery.charging) {
-            setShowGlobe(false);
-          }
-        }).catch(() => {
-          // Battery API not available, fallback to device detection
-          setShowGlobe(!isLowPowered || !isMobile);
-        });
-      } else {
-        // Battery API not available, fallback to device detection
-        setShowGlobe(!isLowPowered || !isMobile);
-      }
-    };
-    
-    checkDeviceCapabilities();
-    
-    // Add performance observer to disable globe if page is lagging
-    if ('PerformanceObserver' in window) {
-      const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          // If frame rate drops below threshold, disable globe
-          if (entry.name === 'frame-rate' && entry.value < 30) {
-            setShowGlobe(false);
-            observer.disconnect();
-            break;
-          }
-        }
-      });
-      
-      // Observe frame rate if supported
-      try {
-        observer.observe({ entryTypes: ['frame-rate'] });
-      } catch (e) {
-        // Frame rate observation not supported
-      }
-      
-      return () => observer.disconnect();
-    }
-  }, []);
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background">
-      {/* Background paths */}
-      <div className="absolute inset-0 opacity-40">
-        <FloatingPaths position={1} />
-        <FloatingPaths position={-1} />
-      </div>
-      
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/[0.05] via-transparent to-indigo-500/[0.05] blur-3xl" />
-
-      {/* Globe - conditionally rendered for performance */}
-      {isClient && showGlobe && (
-        <div className="absolute inset-0 opacity-70 pointer-events-none globe-glow">
-          <Globe className="top-[10%] md:top-[5%]" />
-        </div>
-      )}
-
+    <HeroHighlight containerClassName="min-h-screen">
       {/* Floating images */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <FloatingImage
           src="https://images.unsplash.com/photo-1529655683826-aba9b3e77383?q=80&w=1000&auto=format&fit=crop"
           alt="London"
@@ -286,109 +162,109 @@ export function ModernLanding({
         <div className="max-w-4xl mx-auto text-center">
           {/* Badge */}
           <TextAnimation delay={0.2}>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-background/50 border border-border mb-8 backdrop-blur-sm">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/50 dark:bg-black/50 border border-border mb-8 backdrop-blur-sm">
               <Circle className="h-2 w-2 fill-primary text-primary" />
-              <span className="text-sm text-muted-foreground tracking-wide">
+              <span className="text-sm text-neutral-700 dark:text-slate-200 tracking-wide font-medium">
                 {badge}
               </span>
             </div>
           </TextAnimation>
 
-          {/* Heading with letter animation */}
-          <div className="mb-8">
-            {words.map((word, wordIndex) => (
-              <span
-                key={wordIndex}
-                className="inline-block mr-4 last:mr-0"
-              >
-                {word.split("").map((letter, letterIndex) => (
-                  <motion.span
-                    key={`${wordIndex}-${letterIndex}`}
-                    initial={{ y: 100, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{
-                      delay:
-                        wordIndex * 0.1 +
-                        letterIndex * 0.03,
-                      type: "spring",
-                      stiffness: 150,
-                      damping: 25,
-                    }}
-                    className="inline-block text-transparent bg-clip-text 
-                    bg-gradient-to-r from-blue-600 to-indigo-600 
-                    text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight"
-                  >
-                    {letter}
-                  </motion.span>
-                ))}
-              </span>
-            ))}
-            <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight mt-2">
-              {subtitle}
-            </span>
-          </div>
-
-          {/* Rotating words */}
-          <TextAnimation delay={0.6} className="text-2xl sm:text-3xl md:text-4xl font-medium mb-6">
-            <div className="relative z-10 py-4 px-8 rounded-2xl backdrop-blur-sm inline-block transform hover:scale-105 transition-transform duration-300">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 rounded-2xl -z-10 bg-pulse"
-                style={{ boxShadow: "0 0 25px rgba(59,130,246,0.6)" }}
-              ></div>
-              <span className="text-white font-semibold tracking-wide">
-                A quiz that&apos;s{" "}
-                <RotatingText 
-                  words={rotatingWords} 
-                  className="text-white font-extrabold relative"
-                />
-              </span>
-            </div>
-          </TextAnimation>
-
-          {/* Description */}
-          <TextAnimation delay={0.8}>
-            <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              {description}
-            </p>
-          </TextAnimation>
-
-          {/* Buttons */}
-          <TextAnimation delay={1.0}>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Link href={primaryButtonLink}>
-                <div className="inline-block group relative bg-gradient-to-b from-blue-600/90 to-indigo-600/90 p-px rounded-full backdrop-blur-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                  <motion.button
-                    className="rounded-full px-8 py-3 text-lg font-semibold backdrop-blur-md 
-                    bg-primary text-primary-foreground transition-all duration-300 
-                    group-hover:-translate-y-0.5"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <span className="opacity-90 group-hover:opacity-100 transition-opacity">
-                      {primaryButtonText}
-                    </span>
-                    <span className="ml-3 opacity-70 group-hover:opacity-100 group-hover:translate-x-1.5 transition-all duration-300">
-                      →
-                    </span>
-                  </motion.button>
-                </div>
-              </Link>
-              <Link href={secondaryButtonLink}>
-                <motion.button
-                  className="bg-background border border-border text-foreground px-6 py-3 rounded-full font-medium text-base sm:text-lg flex items-center gap-2"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+          {/* Content container with backdrop blur for better visibility */}
+          <div className="p-6 backdrop-blur-sm bg-white/60 dark:bg-black/60 rounded-2xl">
+            {/* Heading with letter animation */}
+            <div className="mb-8">
+              {words.map((word, wordIndex) => (
+                <span
+                  key={wordIndex}
+                  className="inline-block mr-4 last:mr-0"
                 >
-                  {secondaryButtonText}
-                  <ArrowRightIcon className="h-4 w-4" />
-                </motion.button>
-              </Link>
+                  {word.split("").map((letter, letterIndex) => (
+                    <motion.span
+                      key={`${wordIndex}-${letterIndex}`}
+                      initial={{ y: 100, opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      transition={{
+                        delay:
+                          wordIndex * 0.1 +
+                          letterIndex * 0.03,
+                        type: "spring",
+                        stiffness: 150,
+                        damping: 25,
+                      }}
+                      className="inline-block text-transparent bg-clip-text 
+                      bg-gradient-to-r from-blue-600 to-indigo-600 
+                      text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight"
+                    >
+                      {letter}
+                    </motion.span>
+                  ))}
+                </span>
+              ))}
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight mt-2">
+                {subtitle}
+              </span>
             </div>
-          </TextAnimation>
+
+            {/* Rotating words */}
+            <TextAnimation delay={0.6} className="text-2xl sm:text-3xl md:text-4xl font-medium mb-6">
+              <div className="relative z-10 py-4 px-8 rounded-2xl backdrop-blur-sm inline-block transform hover:scale-105 transition-transform duration-300">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/90 to-indigo-600/90 rounded-2xl -z-10 bg-pulse"
+                  style={{ boxShadow: "0 0 25px rgba(59,130,246,0.6)" }}
+                ></div>
+                <span className="text-white font-semibold tracking-wide">
+                  A quiz that&apos;s{" "}
+                  <RotatingText 
+                    words={rotatingWords} 
+                    className="text-white font-extrabold relative"
+                  />
+                </span>
+              </div>
+            </TextAnimation>
+
+            {/* Description */}
+            <TextAnimation delay={0.8}>
+              <p className="text-base sm:text-lg md:text-xl text-neutral-800 dark:text-slate-200 mb-8 max-w-2xl mx-auto font-medium">
+                {description}
+              </p>
+            </TextAnimation>
+
+            {/* Buttons */}
+            <TextAnimation delay={1.0}>
+              <div className="flex flex-wrap justify-center gap-4">
+                <Link href={primaryButtonLink}>
+                  <div className="inline-block group relative bg-gradient-to-b from-blue-600/90 to-indigo-600/90 p-px rounded-full backdrop-blur-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                    <motion.button
+                      className="rounded-full px-8 py-3 text-lg font-semibold backdrop-blur-md 
+                      bg-primary text-primary-foreground transition-all duration-300 
+                      group-hover:-translate-y-0.5"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span className="opacity-90 group-hover:opacity-100 transition-opacity">
+                        {primaryButtonText}
+                      </span>
+                      <span className="ml-3 opacity-70 group-hover:opacity-100 group-hover:translate-x-1.5 transition-all duration-300">
+                        →
+                      </span>
+                    </motion.button>
+                  </div>
+                </Link>
+                <Link href={secondaryButtonLink}>
+                  <motion.button
+                    className="bg-background border border-border text-foreground px-6 py-3 rounded-full font-medium text-base sm:text-lg flex items-center gap-2"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {secondaryButtonText}
+                    <ArrowRightIcon className="h-4 w-4" />
+                  </motion.button>
+                </Link>
+              </div>
+            </TextAnimation>
+          </div>
         </div>
       </div>
-
-      {/* Overlay gradient */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/80 pointer-events-none" />
-    </div>
+    </HeroHighlight>
   );
 } 
