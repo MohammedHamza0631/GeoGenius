@@ -12,10 +12,13 @@ export async function saveScore(data) {
   try {
     const { username, score, difficulty } = data;
     
+    // Trim the username to avoid issues with spaces
+    const trimmedUsername = username.trim();
+    
     // Find the existing entry for this user with the same difficulty
     const existingEntry = await prisma.leaderboardEntry.findFirst({
       where: { 
-        username,
+        username: trimmedUsername,
         difficulty
       },
     });
@@ -23,7 +26,7 @@ export async function saveScore(data) {
     // Find the current best score for this user (across all difficulties)
     const existingBestScore = await prisma.leaderboardEntry.findFirst({
       where: { 
-        username,
+        username: trimmedUsername,
         isBestScore: true 
       },
     });
@@ -67,7 +70,7 @@ export async function saveScore(data) {
       // Create a new entry if one doesn't exist for this user and difficulty
       entry = await prisma.leaderboardEntry.create({
         data: { 
-          username, 
+          username: trimmedUsername, 
           score, 
           difficulty,
           isBestScore: isNewBestScore

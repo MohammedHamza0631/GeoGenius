@@ -14,6 +14,9 @@ export async function POST(request) {
       );
     }
 
+    // Trim the username to avoid issues with spaces
+    const trimmedUsername = username.trim();
+
     // First check if database is connected
     const isConnected = await testConnection();
     if (!isConnected) {
@@ -25,12 +28,12 @@ export async function POST(request) {
     }
 
     // Hash the PIN
-    const pinHash = hashPin(pin, username);
+    const pinHash = hashPin(pin, trimmedUsername);
 
     // Find all entries for this username and update them with the PIN hash
     const updateResult = await prisma.leaderboardEntry.updateMany({
       where: {
-        username: username
+        username: trimmedUsername
       },
       data: {
         pinHash: pinHash

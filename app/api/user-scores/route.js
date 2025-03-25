@@ -13,6 +13,9 @@ export async function GET(request) {
       );
     }
 
+    // Trim the username to avoid issues with spaces
+    const trimmedUsername = username.trim();
+
     // First check if database is connected
     const isConnected = await testConnection();
     if (!isConnected) {
@@ -26,7 +29,7 @@ export async function GET(request) {
     // Fetch the user's best score
     const bestScore = await prisma.leaderboardEntry.findFirst({
       where: {
-        username: username,
+        username: trimmedUsername,
         isBestScore: true
       },
     });
@@ -34,7 +37,7 @@ export async function GET(request) {
     // Fetch all scores for this user
     const allScores = await prisma.leaderboardEntry.findMany({
       where: {
-        username: username,
+        username: trimmedUsername,
       },
       orderBy: [
         {

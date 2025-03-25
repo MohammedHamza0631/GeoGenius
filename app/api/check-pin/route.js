@@ -14,6 +14,9 @@ export async function GET(request) {
       );
     }
 
+    // Trim the username to avoid issues with spaces
+    const trimmedUsername = username.trim();
+
     // First check if database is connected
     const isConnected = await testConnection();
     if (!isConnected) {
@@ -27,7 +30,7 @@ export async function GET(request) {
     // Check if the username exists and has a PIN
     const user = await prisma.leaderboardEntry.findFirst({
       where: {
-        username: username,
+        username: trimmedUsername,
         NOT: {
           pinHash: null
         }
@@ -64,6 +67,9 @@ export async function POST(request) {
       );
     }
 
+    // Trim the username to avoid issues with spaces
+    const trimmedUsername = username.trim();
+    
     // First check if database is connected
     const isConnected = await testConnection();
     if (!isConnected) {
@@ -77,7 +83,7 @@ export async function POST(request) {
     // Get the user's PIN hash
     const user = await prisma.leaderboardEntry.findFirst({
       where: {
-        username: username,
+        username: trimmedUsername,
         NOT: {
           pinHash: null
         }
@@ -96,7 +102,7 @@ export async function POST(request) {
     }
 
     // Verify the PIN
-    const isValid = verifyPin(pin, username, user.pinHash);
+    const isValid = verifyPin(pin, trimmedUsername, user.pinHash);
 
     return NextResponse.json({
       success: true,

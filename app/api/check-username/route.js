@@ -13,6 +13,9 @@ export async function GET(request) {
       );
     }
 
+    // Trim the username to avoid issues with spaces
+    const trimmedUsername = username.trim();
+
     // First check if database is connected
     const isConnected = await testConnection();
     if (!isConnected) {
@@ -26,7 +29,7 @@ export async function GET(request) {
     // Check if the username exists in the database
     const existingUser = await prisma.leaderboardEntry.findFirst({
       where: {
-        username: username,
+        username: trimmedUsername,
       },
     });
 
